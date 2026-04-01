@@ -17,8 +17,8 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 205 100% 32%;
+    --primary-foreground: 0 0% 100%;
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -26,15 +26,15 @@ All colors MUST be HSL.
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 32 100% 50%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 210 24% 88%;
+    --input: 210 24% 88%;
+    --ring: 205 100% 32%;
 
     --radius: 0.5rem;
 
@@ -101,5 +101,45 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  @keyframes archiged-blob {
+    0% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    33% {
+      transform: translate3d(24px, -18px, 0) scale(1.05);
+    }
+    66% {
+      transform: translate3d(-18px, 20px, 0) scale(0.98);
+    }
+    100% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+  }
+
+  .archiged-blob {
+    animation: archiged-blob 16s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  .archiged-blob-2 {
+    animation-duration: 22s;
+  }
+
+  .archiged-blob-3 {
+    animation-duration: 28s;
+  }
+
+  .archiged-hover-lift {
+    transition-property: transform, box-shadow;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 250ms;
+  }
+
+  .archiged-hover-lift:hover {
+    transform: translateY(-2px);
   }
 }

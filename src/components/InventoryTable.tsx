@@ -56,72 +56,62 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({ entries }) => {
   }
 
   return (
-    <div className="bg-white/90 backdrop-blur-sm rounded-2xl border-2 border-gray-100 overflow-hidden shadow-lg">
+    <div className="bg-card rounded-2xl border border-border/70 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
       <Table>
         <TableHeader>
-          <TableRow className="border-gray-200 bg-gray-50/50">
-            <TableHead className="w-16 font-apple-text font-semibold text-gray-700">N°</TableHead>
-            <TableHead className="font-apple-text font-semibold text-gray-700">Intermédiaire ORASS</TableHead>
-            <TableHead className="font-apple-text font-semibold text-gray-700">Police ORASS</TableHead>
-            <TableHead className="font-apple-text font-semibold text-gray-700">Ancien numéro</TableHead>
-            <TableHead className="font-apple-text font-semibold text-gray-700">Date effet</TableHead>
-            <TableHead className="font-apple-text font-semibold text-gray-700">Date échéance</TableHead>
-            <TableHead className="font-apple-text font-semibold text-gray-700">Nom assuré</TableHead>
-            <TableHead className="font-apple-text font-semibold text-gray-700">Type société</TableHead>
-            <TableHead className="font-apple-text font-semibold text-gray-700">Type document</TableHead>
-            <TableHead className="font-apple-text font-semibold text-gray-700">Agent inventaire</TableHead>
-            <TableHead className="font-apple-text font-semibold text-gray-700">Agence</TableHead>
-            <TableHead className="font-apple-text font-semibold text-gray-700">Créé le</TableHead>
-            <TableHead className="font-apple-text font-semibold text-gray-700 w-20">Doublon</TableHead>
-            <TableHead className="font-apple-text font-semibold text-gray-700">État contrat</TableHead>
+          <TableRow className="border-border/70 bg-primary/5">
+            <TableHead className="w-16 font-apple-text font-semibold text-foreground">N°</TableHead>
+            <TableHead className="font-apple-text font-semibold text-foreground">Intermédiaire ORASS</TableHead>
+            <TableHead className="font-apple-text font-semibold text-foreground">Police ORASS</TableHead>
+            <TableHead className="font-apple-text font-semibold text-foreground">Ancien numéro</TableHead>
+            <TableHead className="font-apple-text font-semibold text-foreground">Date effet</TableHead>
+            <TableHead className="font-apple-text font-semibold text-foreground">Date échéance</TableHead>
+            <TableHead className="font-apple-text font-semibold text-foreground">Nom assuré</TableHead>
+            <TableHead className="font-apple-text font-semibold text-foreground">Type société</TableHead>
+            <TableHead className="font-apple-text font-semibold text-foreground">Type document</TableHead>
+            <TableHead className="font-apple-text font-semibold text-foreground">Agent inventaire</TableHead>
+            <TableHead className="font-apple-text font-semibold text-foreground">Agence</TableHead>
+            <TableHead className="font-apple-text font-semibold text-foreground">Créé le</TableHead>
+            <TableHead className="font-apple-text font-semibold text-foreground">État contrat</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {entries.map((entry, index) => (
-            <TableRow key={entry.id} className="border-gray-100 hover:bg-blue-50/50 transition-colors duration-150">
-              <TableCell className="font-apple-text font-medium text-gray-900">{entry.no}</TableCell>
-              <TableCell className="font-apple-text text-gray-700">{entry.intermediaire_orass}</TableCell>
-              <TableCell className="font-apple-text text-gray-700">{entry.police_orass}</TableCell>
-              <TableCell className="font-apple-text text-gray-500">{entry.ancien_numero || '-'}</TableCell>
-              <TableCell className="font-apple-text text-gray-700">{format(new Date(entry.date_effet), 'dd/MM/yyyy')}</TableCell>
-              <TableCell className="font-apple-text text-gray-700">{format(new Date(entry.date_echeance), 'dd/MM/yyyy')}</TableCell>
-              <TableCell className="font-apple-text text-gray-700">{entry.nom_assure}</TableCell>
+            <TableRow key={entry.id} className="border-border/40 hover:bg-accent/5 transition-colors duration-150">
+              <TableCell className="font-apple-text font-medium text-foreground">{entry.no}</TableCell>
+              <TableCell className="font-apple-text text-foreground/80">{entry.intermediaire_orass}</TableCell>
+              <TableCell className="font-apple-text text-foreground/80">{entry.police_orass}</TableCell>
+              <TableCell className="font-apple-text text-muted-foreground">{entry.ancien_numero || '-'}</TableCell>
+              <TableCell className="font-apple-text text-foreground/80">{format(new Date(entry.date_effet), 'dd/MM/yyyy')}</TableCell>
+              <TableCell className="font-apple-text text-foreground/80">{format(new Date(entry.date_echeance), 'dd/MM/yyyy')}</TableCell>
+              <TableCell className="font-apple-text text-foreground/80">{entry.nom_assure}</TableCell>
               <TableCell className="font-apple-text">
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                   entry.societe_concernee === 'Vie' 
-                    ? 'bg-green-100 text-green-800' 
+                    ? 'bg-primary/10 text-primary' 
                     : entry.societe_concernee === 'IARD (Sinistre)'
-                    ? 'bg-red-100 text-red-800'
-                    : 'bg-blue-100 text-blue-800'
+                    ? 'bg-red-500/10 text-red-700'
+                    : 'bg-accent/15 text-accent-foreground'
                 }`}>
                   {entry.societe_concernee}
                 </span>
               </TableCell>
-              <TableCell className="font-apple-text text-gray-700">{entry.type_document}</TableCell>
-              <TableCell className="font-apple-text text-gray-700">{entry.nom_agent_inventaire}</TableCell>
-              <TableCell className="font-apple-text text-gray-700">{entry.agence || '-'}</TableCell>
-              <TableCell className="font-apple-text text-gray-700">
+              <TableCell className="font-apple-text text-foreground/80">{entry.type_document}</TableCell>
+              <TableCell className="font-apple-text text-foreground/80">{entry.nom_agent_inventaire}</TableCell>
+              <TableCell className="font-apple-text text-foreground/80">{entry.agence || '-'}</TableCell>
+              <TableCell className="font-apple-text text-foreground/80">
                 <div className="flex flex-col">
                   <span className="text-sm">{format(new Date(entry.created_at), 'dd/MM/yyyy')}</span>
-                  <span className="text-xs text-gray-500">{format(new Date(entry.created_at), 'HH:mm:ss')}</span>
+                  <span className="text-xs text-muted-foreground">{format(new Date(entry.created_at), 'HH:mm:ss')}</span>
                 </div>
-              </TableCell>
-              <TableCell className="text-center">
-                {duplicateResult && duplicateResult.entriesWithDuplicates.has(entry.id) && (
-                  <SimpleDuplicateIndicator 
-                    count={duplicateResult.duplicates.find(group => 
-                      group.entries.some(e => e.id === entry.id)
-                    )?.count || 2} 
-                  />
-                )}
               </TableCell>
               <TableCell>
                 {entry.etat_contrat ? (
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                     entry.etat_contrat === 'Actif' 
-                      ? 'bg-green-100 text-green-800' 
+                      ? 'bg-primary/10 text-primary' 
                       : entry.etat_contrat === 'Résilié'
-                      ? 'bg-red-100 text-red-800'
+                      ? 'bg-red-500/10 text-red-700'
                       : 'bg-gray-100 text-gray-800'
                   }`}>
                     {entry.etat_contrat === 'Actif' && (

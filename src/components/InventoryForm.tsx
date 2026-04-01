@@ -19,6 +19,7 @@ import {
   FormMessage 
 } from '@/components/ui';
 import { logger } from '@/lib/logger';
+import { Plus } from 'lucide-react';
 
 const inventorySchema = z.object({
   intermediaire_orass: z.string().trim().min(1, { message: "INTERMEDIAIRE ORASS est obligatoire" }),
@@ -154,13 +155,13 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ onSubmit, isSubmit
   return (
     <div className="relative overflow-hidden">
       {/* Fond avec gradient subtil */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white via-blue-50/30 to-indigo-50/50 rounded-3xl"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-white via-slate-50 to-white rounded-3xl"></div>
       
       {/* Contenu principal */}
-      <div className="relative space-y-10 p-10 bg-white/80 backdrop-blur-sm rounded-3xl border border-gray-200/60 shadow-2xl shadow-blue-500/5">
+      <div className="relative space-y-10 p-10 bg-card/90 backdrop-blur-sm rounded-3xl border border-border/70 shadow-2xl shadow-primary/5">
         {/* En-tête élégant */}
         <div className="text-center space-y-4">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg shadow-blue-500/25 mb-4">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary to-primary/75 rounded-2xl shadow-lg shadow-primary/20 mb-4 ring-1 ring-primary/10">
             <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
@@ -174,17 +175,17 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ onSubmit, isSubmit
           </p>
           
           {/* Badge agent avec style amélioré */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-full border border-blue-200/50 shadow-sm">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary/10 to-accent/10 rounded-full border border-border/70 shadow-sm">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-            <span className="text-sm font-apple-text font-medium text-blue-900">Agent:</span>
-            <span className="text-sm font-apple-text font-semibold text-blue-800">{agentName}</span>
+            <span className="text-sm font-apple-text font-medium text-foreground">Agent:</span>
+            <span className="text-sm font-apple-text font-semibold text-primary">{agentName}</span>
           </div>
         </div>
       
         {/* Formulaire avec espacement amélioré */}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} onKeyDown={handleKeyDown} className="space-y-8">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-8">
               <FormField
                 control={form.control}
                 name="intermediaire_orass"
@@ -416,7 +417,7 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ onSubmit, isSubmit
               <Button 
                 type="submit" 
                 disabled={isSubmitting} 
-                className="h-16 px-12 text-lg font-apple-text font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-lg"
+                className="h-14 px-10 text-lg font-apple-text font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-lg"
               >
                 {isSubmitting ? (
                   <div className="flex items-center gap-3">
@@ -425,9 +426,7 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ onSubmit, isSubmit
                   </div>
                 ) : (
                   <div className="flex items-center gap-3">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
+                    <Plus className="w-10 h-10" />
                     <span>Ajouter à l'inventaire</span>
                   </div>
                 )}

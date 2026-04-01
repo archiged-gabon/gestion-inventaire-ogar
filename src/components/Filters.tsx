@@ -54,10 +54,10 @@ export const Filters: React.FC<FiltersProps> = ({ value, onChange, onReset, sort
   const reset = () => onReset();
 
   return (
-    <div className="bg-white/80 backdrop-blur-sm rounded-2xl border-2 border-gray-200 shadow-lg p-4 space-y-4">
+    <div className="bg-card/90 backdrop-blur-sm rounded-2xl border border-border/70 shadow-sm hover:shadow-md transition-shadow duration-300 p-4 space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
         {/* Ligne 1: Recherche (6) + Type document (6) */}
-        <div className="md:col-span-6 min-w-0">
+        <div className="md:col-span-3 min-w-0">
           <Input
             placeholder="Rechercher (intermédiaire, police, assuré, ancien n°)"
             value={local.keyword || ''}
@@ -69,7 +69,7 @@ export const Filters: React.FC<FiltersProps> = ({ value, onChange, onReset, sort
             }}
           />
         </div>
-        <div className="md:col-span-6 min-w-0">
+        <div className="md:col-span-3 min-w-0">
           <Input
             placeholder="Type de document"
             value={local.type_document || ''}
@@ -78,7 +78,7 @@ export const Filters: React.FC<FiltersProps> = ({ value, onChange, onReset, sort
         </div>
 
         {/* Ligne 2: Société (4) + Trier par (5) + Ordre (3) */}
-        <div className="md:col-span-4 min-w-0">
+        <div className="md:col-span-3 min-w-0">
           <Select
             value={local.societe_concernee ?? 'all'}
             onValueChange={(v) =>
@@ -92,14 +92,14 @@ export const Filters: React.FC<FiltersProps> = ({ value, onChange, onReset, sort
               <SelectValue placeholder="Type de société" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Toutes</SelectItem>
+              <SelectItem value="all">Toutes les sociétés</SelectItem>
               <SelectItem value="Vie">Vie</SelectItem>
               <SelectItem value="IARD (Sinistre)">IARD (Sinistre)</SelectItem>
               <SelectItem value="Production">Production</SelectItem>
             </SelectContent>
           </Select>
         </div>
-        <div className="md:col-span-5 min-w-0">
+        <div className="md:col-span-3 min-w-0">
           <Select
             value={sort?.column || 'no'}
             onValueChange={(v) => onSortChange && onSortChange({ column: v as any, direction: sort?.direction || 'asc' })}
@@ -115,7 +115,7 @@ export const Filters: React.FC<FiltersProps> = ({ value, onChange, onReset, sort
             </SelectContent>
           </Select>
         </div>
-        <div className="md:col-span-3 min-w-0">
+        <div className="md:col-span-4 min-w-0">
           <Select
             value={sort?.direction || 'asc'}
             onValueChange={(v) => onSortChange && onSortChange({ column: sort?.column || 'no', direction: v as any })}
@@ -131,7 +131,7 @@ export const Filters: React.FC<FiltersProps> = ({ value, onChange, onReset, sort
         </div>
 
         {/* Ligne 3: Période (6 + 6) avec min-w-0 */}
-        <div className="md:col-span-6 min-w-0">
+        <div className="md:col-span-4 min-w-0">
           <DateInput
             value={local.date_effet_from ? new Date(local.date_effet_from) : undefined}
             onChange={(d) => setLocal((s) => ({ ...s, date_effet_from: d ? d.toISOString().split('T')[0] : undefined }))}
@@ -139,7 +139,7 @@ export const Filters: React.FC<FiltersProps> = ({ value, onChange, onReset, sort
             className="w-full"
           />
         </div>
-        <div className="md:col-span-6 min-w-0">
+        <div className="md:col-span-4 min-w-0">
           <DateInput
             value={local.date_effet_to ? new Date(local.date_effet_to) : undefined}
             onChange={(d) => setLocal((s) => ({ ...s, date_effet_to: d ? d.toISOString().split('T')[0] : undefined }))}
@@ -150,8 +150,8 @@ export const Filters: React.FC<FiltersProps> = ({ value, onChange, onReset, sort
       </div>
 
       <div className="flex items-center justify-end gap-3">
-        <Button variant="ghost" onClick={reset} className="rounded-xl">Réinitialiser</Button>
-        <Button onClick={apply} className="rounded-xl">Appliquer les filtres</Button>
+        <Button variant="ghost" onClick={reset} className="rounded-xl hover:bg-accent/10">Réinitialiser</Button>
+        <Button onClick={apply} className="rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">Appliquer les filtres</Button>
       </div>
     </div>
   );

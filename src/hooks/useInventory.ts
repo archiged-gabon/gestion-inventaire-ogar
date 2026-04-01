@@ -16,7 +16,7 @@ export type InventorySort = {
   direction: InventorySortDirection;
 };
 
-
+// Type pour les filtres
 export type InventoryFilters = {
   keyword?: string; // Recherche plein texte simple sur quelques colonnes clés
   societe_concernee?: 'Vie' | 'IARD (Sinistre)' | 'Production';
@@ -78,9 +78,17 @@ export type AgentDailyStats = {
   production_resilies_jour: number;
 };
 
+// Type pour les statistiques filtrées
+export type FilteredStats = {
+  total: number;
+  vie: number;
+  iard: number;
+  production: number;
+};
+
 export const useInventory = () => {
-  const [entries, setEntries] = useState<InventoryEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [allEntries, setAllEntries] = useState<InventoryEntry[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
   const [agents, setAgents] = useState<string[]>([]);
@@ -89,19 +97,64 @@ export const useInventory = () => {
   const [isLoadingAgents, setIsLoadingAgents] = useState(true);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [isLoadingDailyStats, setIsLoadingDailyStats] = useState(true);
-  
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(20);
+  const [sort, setSort] = useState<InventorySort>({ column: 'created_at', direction: 'desc' });
+  const [filters, setFilters] = useState<InventoryFilters>({});
+
   // Référence pour empêcher les soumissions multiples
   const submissionLockRef = useRef<boolean>(false);
   const submissionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // État pagination/tri/filtres
-  const [page, setPage] = useState<number>(1);
-  const [pageSize, setPageSize] = useState<number>(20);
-  const [totalCount, setTotalCount] = useState<number>(0);
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [totalCount, pageSize]);
+  // Filtrage instantané côté client
+  const filteredEntries = useMemo(() => {
+    let filtered = [...allEntries];
+    const kw = filters.keyword?.trim().toLowerCase();
+    if (kw) {
+      filtered = filtered.filter(e =>
+        (e.intermediaire_orass || '').toLowerCase().includes(kw) ||
+        (e.police_orass || '').toLowerCase().includes(kw) ||
+        (e.nom_assure || '').toLowerCase().includes(kw) ||
+        (e.ancien_numero || '').toLowerCase().includes(kw)
+      );
+    }
+    if (filters.societe_concernee) {
+      filtered = filtered.filter(e => e.societe_concernee === filters.societe_concernee);
+    }
+    if (filters.type_document) {
+      filtered = filtered.filter(e => (e.type_document || '').toLowerCase().includes(filters.type_document!.toLowerCase()));
+    }
+    if (filters.date_effet_from) {
+      filtered = filtered.filter(e => e.date_effet >= filters.date_effet_from!);
+    }
+    if (filters.date_effet_to) {
+      filtered = filtered.filter(e => e.date_effet <= filters.date_effet_to!);
+    }
+    // Tri
+    const { column, direction } = sort;
+    filtered.sort((a, b) => {
+      let av: any = a[column];
+      let bv: any = b[column];
+      if (av instanceof Date) av = av.getTime();
+      if (bv instanceof Date) bv = bv.getTime();
+      if (typeof av === 'string') av = av.toLowerCase();
+      if (typeof bv === 'string') bv = bv.toLowerCase();
+      if (av < bv) return direction === 'asc' ? -1 : 1;
+      if (av > bv) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return filtered;
+  }, [allEntries, filters, sort]);
 
-  const [sort, setSort] = useState<InventorySort>({ column: 'created_at', direction: 'desc' });
-  const [filters, setFilters] = useState<InventoryFilters>({});
+  // Pagination côté client
+  const entries = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredEntries.slice(start, start + pageSize);
+  }, [filteredEntries, page, pageSize]);
+
+  const totalCount = useMemo(() => filteredEntries.length, [filteredEntries.length]);
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / pageSize)), [totalCount, pageSize]);
 
   type RpcReturn<T> = Promise<{ data: T | null; error: unknown }>;
   const rpc = React.useCallback(<T>(fn: string, args?: Record<string, unknown>): RpcReturn<T> => {
@@ -154,10 +207,10 @@ export const useInventory = () => {
   };
 
   type FilteredStatsRow = {
-    societe_type: string;
-    total: number;
-    total_actifs?: number | null;
-    total_resilies?: number | null;
+    total: number | null;
+    vie: number | null;
+    iard: number | null;
+    production: number | null;
   };
   type AgentStatsRPCRow = {
     nom_agent_inventaire: string;
@@ -204,78 +257,23 @@ export const useInventory = () => {
     production_resilies_jour?: number | null;
   };
 
-  // Fonction utilitaire pour normaliser les chaînes de recherche
-  const normalizeSearchTerm = (term: string): string => {
-    return term
-      .trim()
-      .toLowerCase()
-      .normalize('NFD') // Décompose les caractères accentués
-      .replace(/[\u0300-\u036f]/g, '') // Supprime les accents
-      .replace(/\s+/g, ' '); // Normalise les espaces multiples
-  };
-
-  const buildQuery = () => {
-    // Sélecteur avec comptage exact pour calculer le total côté serveur
-    let query = supabase.from('inventory').select('*', { count: 'exact' });
-
-    // Filtres avec nettoyage et validation
-    if (filters.keyword) {
-      const kw = normalizeSearchTerm(filters.keyword);
-      if (kw.length > 0) {
-        // Recherche case-insensitive et sans accents sur plusieurs colonnes via OR
-        query = query.or(
-          `intermediaire_orass.ilike.%${kw}%,police_orass.ilike.%${kw}%,nom_assure.ilike.%${kw}%,ancien_numero.ilike.%${kw}%`,
-        );
-      }
-    }
-    
-    if (filters.societe_concernee) {
-      query = query.eq('societe_concernee', filters.societe_concernee);
-    }
-    
-    if (filters.type_document) {
-      const typeDoc = filters.type_document.trim();
-      if (typeDoc.length > 0) {
-        query = query.ilike('type_document', `%${typeDoc}%`);
-      }
-    }
-    
-    if (filters.date_effet_from) {
-      query = query.gte('date_effet', filters.date_effet_from);
-    }
-    
-    if (filters.date_effet_to) {
-      query = query.lte('date_effet', filters.date_effet_to);
-    }
-    
-    if (filters.etat_contrat) {
-      query = query.eq('etat_contrat', filters.etat_contrat);
-    }
-
-    // Tri
-    query = query.order(sort.column, { ascending: sort.direction === 'asc' });
-
-    // Pagination
-    const from = (page - 1) * pageSize;
-    const to = from + pageSize - 1;
-    query = query.range(from, to);
-
-    return query;
-  };
-
-  const fetchEntries = async () => {
+  const fetchAllEntries = async () => {
     setIsLoading(true);
-    logger.info('useInventory', 'Fetching entries', { page, pageSize, sort, filters });
+    logger.info('useInventory', 'Fetching all entries for client-side filtering');
     try {
-      const query = buildQuery();
-      const { data, error, count } = await query;
+      const { data, error } = await supabase
+        .from('inventory')
+        .select('*')
+        .order('created_at', { ascending: false });
+
       if (error) throw error;
-      setEntries(data || []);
-      setTotalCount(count || 0);
-      logger.info('useInventory', 'Fetch success', { returned: data?.length ?? 0, totalCount: count });
+
+      setAllEntries(data || []);
+      logger.info('useInventory', 'Fetch all entries success', { count: data?.length });
     } catch (error) {
-      console.error('Error fetching entries:', error);
-      logger.error('useInventory', 'Fetch failed', { error: String(error) });
+      console.error('Error fetching all entries:', error);
+      logger.error('useInventory', 'Fetch all entries failed', { error: String(error) });
+      setError('Impossible de charger les entrées.');
       toast({
         title: 'Erreur',
         description: 'Impossible de charger les entrées.',
@@ -297,7 +295,7 @@ export const useInventory = () => {
       });
       return;
     }
-    
+
     // Vérifier les doublons potentiels avant soumission
     const duplicateCheck = checkPotentialDuplicate(data, entries);
     if (duplicateCheck.isDuplicate && duplicateCheck.existingEntry) {
@@ -398,7 +396,7 @@ export const useInventory = () => {
         description: 'Entrée ajoutée avec succès.',
       });
 
-      await fetchEntries();
+      await fetchAllEntries();
       setSubmissionSuccess(true);
       logger.info('useInventory', 'Add entry success');
       
@@ -413,10 +411,29 @@ export const useInventory = () => {
       logger.error('useInventory', 'Add entry failed', { error: String(error) });
       
       // Vérifier si c'est une erreur de doublon côté serveur
-      if (error instanceof Error && error.message.includes('doublon')) {
+      const err = error as unknown as {
+        code?: string;
+        message?: string;
+        details?: string;
+        hint?: string;
+      };
+
+      const message = (err?.message || (error instanceof Error ? error.message : '') || '').toLowerCase();
+      const details = (err?.details || '').toLowerCase();
+      const hint = (err?.hint || '').toLowerCase();
+
+      const isUniqueViolation = err?.code === '23505';
+      const isDuplicateTriggerMessage =
+        message.includes('doublon') ||
+        details.includes('doublon') ||
+        hint.includes('doublon') ||
+        message.includes('existe déjà') ||
+        message.includes('existe deja');
+
+      if (isUniqueViolation || isDuplicateTriggerMessage) {
         toast({
           title: 'Doublon détecté',
-          description: 'Cette entrée existe déjà dans la base de données.',
+          description: 'Ce dossier est déjà enregistré.',
           variant: 'destructive',
         });
       } else {
@@ -440,80 +457,24 @@ export const useInventory = () => {
   };
 
   useEffect(() => {
-    fetchEntries();
+    fetchAllEntries();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize, JSON.stringify(filters), sort.column, sort.direction]);
+  }, []); // Charger toutes les entrées une seule fois au montage
+
+  // Fonction utilitaire pour normaliser les chaînes de recherche
+  const normalizeSearchTerm = (term: string): string => {
+    return term
+      .trim()
+      .toLowerCase()
+      .normalize('NFD') // Décompose les caractères accentués
+      .replace(/[\u0300-\u036f]/g, '') // Supprime les accents
+      .replace(/\s+/g, ' '); // Normalise les espaces multiples
+  };
 
   // Aides pagination
   const nextPage = () => setPage((p) => Math.min(totalPages, p + 1));
   const prevPage = () => setPage((p) => Math.max(1, p - 1));
   const updatePage = (p: number) => setPage(() => Math.min(Math.max(1, p), totalPages));
-
-// Hook pour récupérer les statistiques basées sur les filtres appliqués
-const getFilteredStats = React.useCallback(async () => {
-  try {
-    logger.info('useInventory', 'Fetching filtered stats via RPC', { filters });
-
-    // Utiliser la nouvelle fonction RPC pour obtenir des statistiques filtrées
-    const { data, error } = await rpc<FilteredStatsRow[]>('get_filtered_stats', {
-      keyword: filters.keyword ? normalizeSearchTerm(filters.keyword) : null,
-      societe_concernee: filters.societe_concernee || null,
-      type_document: filters.type_document ? filters.type_document.trim() : null,
-      date_effet_from: filters.date_effet_from || null,
-      date_effet_to: filters.date_effet_to || null,
-      etat_contrat: filters.etat_contrat || null
-    });
-
-    if (error) throw error;
-
-    // Initialiser les valeurs par défaut
-    const stats = {
-      total: 0,
-      vie: 0,
-      iard: 0,
-      production: 0,
-      actifs: 0,
-      resilies: 0
-    };
-
-    // Calculer les totaux à partir des résultats agrégés
-    if (data && data.length > 0) {
-      // Calculer le total d'entrées, actifs et résiliés
-      stats.total = data.reduce((sum, item) => sum + Number(item.total), 0);
-      stats.actifs = data.reduce((sum, item) => sum + Number(item.total_actifs || 0), 0);
-      stats.resilies = data.reduce((sum, item) => sum + Number(item.total_resilies || 0), 0);
-      
-      // Répartir par type de société
-      data.forEach(item => {
-        if (item.societe_type === 'Vie') {
-          stats.vie = Number(item.total);
-        } else if (item.societe_type === 'IARD (Sinistre)') {
-          stats.iard = Number(item.total);
-        } else if (item.societe_type === 'Production') {
-          stats.production = Number(item.total);
-        }
-      });
-    }
-
-    logger.info('useInventory', 'Filtered stats success', { 
-      stats, 
-      filterCount: Object.keys(filters).filter(k => !!filters[k as keyof InventoryFilters]).length 
-    });
-    
-    // Pour maintenir la compatibilité avec le code existant qui attend un format précis
-    // On ne retourne que les statistiques utilisées par l'interface actuelle
-    return {
-      total: stats.total,
-      vie: stats.vie,
-      iard: stats.iard,
-      production: stats.production
-    };
-  } catch (error) {
-    console.error('Error fetching filtered stats:', error);
-    logger.error('useInventory', 'Filtered stats failed', { error: String(error) });
-    return { total: 0, vie: 0, iard: 0, production: 0 };
-  }
-}, [filters, rpc]);
 
   // Fonction pour supprimer une entrée
   const deleteEntry = async (entryId: string) => {
@@ -533,7 +494,7 @@ const getFilteredStats = React.useCallback(async () => {
       });
       
       // Rafraîchir la liste des entrées
-      await fetchEntries();
+      await fetchAllEntries();
       
       logger.info('useInventory', 'Entry deleted successfully', { entryId });
     } catch (error) {
@@ -548,7 +509,6 @@ const getFilteredStats = React.useCallback(async () => {
     }
   };
 
-  // Gestion filtres: réinitialiser la page à 1
   const applyFilters = (next: InventoryFilters) => {
     setPage(1);
     setFilters(next);
@@ -556,6 +516,9 @@ const getFilteredStats = React.useCallback(async () => {
   const resetFilters = () => {
     setPage(1);
     setFilters({});
+  };
+  const refreshEntries = () => {
+    fetchAllEntries();
   };
 
   // Fonction pour récupérer la liste des agents distincts
@@ -588,109 +551,155 @@ const getFilteredStats = React.useCallback(async () => {
     }
   };
 
-// Fonction pour récupérer les statistiques des agents avec la fonction RPC
-const fetchAgentStats = React.useCallback(async () => {
-  setIsLoadingStats(true);
-  logger.info('useInventory', 'Fetching agent stats via RPC');
-  try {
-    const { data, error } = await rpc<AgentStatsRPCRow[]>('get_agent_stats_by_agence');
+  // Fonction pour récupérer les statistiques des agents avec la fonction RPC
+  const fetchAgentStats = React.useCallback(async () => {
+    setIsLoadingStats(true);
+    logger.info('useInventory', 'Fetching agent stats via RPC');
+    try {
+      const { data, error } = await rpc<AgentStatsRPCRow[]>('get_agent_stats_by_agence');
 
-    if (error) throw error;
+      if (error) throw error;
 
-    const formattedStats: AgentStats[] = (data || []).map((item: AgentStatsRPCRow) => ({
-      nom_agent_inventaire: item.nom_agent_inventaire,
-      total: Number(item.total),
-      derniere_activite: item.derniere_activite,
-      total_actifs: Number(item.total_actifs || 0),
-      total_resilies: Number(item.total_resilies || 0),
-      okala_total: Number(item.okala_total || 0),
-      site_okala_total: Number(item.site_okala_total || 0),
-      nzeng_ayong_total: Number(item.nzeng_ayong_total || 0),
-      pk9_total: Number(item.pk9_total || 0),
-      owendo_total: Number(item.owendo_total || 0),
-      espace_conseil_total: Number(item.espace_conseil_total || 0),
-      vie_total: Number(item.vie_total || 0),
-      vie_actifs: Number(item.vie_actifs || 0),
-      vie_resilies: Number(item.vie_resilies || 0),
-      iard_total: Number(item.iard_total || 0),
-      iard_actifs: Number(item.iard_actifs || 0),
-      iard_resilies: Number(item.iard_resilies || 0),
-      production_total: Number(item.production_total || 0),
-      production_actifs: Number(item.production_actifs || 0),
-      production_resilies: Number(item.production_resilies || 0)
-    }));
+      const formattedStats: AgentStats[] = (data || []).map((item: AgentStatsRPCRow) => ({
+        nom_agent_inventaire: item.nom_agent_inventaire,
+        total: Number(item.total),
+        derniere_activite: item.derniere_activite,
+        total_actifs: Number(item.total_actifs || 0),
+        total_resilies: Number(item.total_resilies || 0),
+        okala_total: Number(item.okala_total || 0),
+        site_okala_total: Number(item.site_okala_total || 0),
+        nzeng_ayong_total: Number(item.nzeng_ayong_total || 0),
+        pk9_total: Number(item.pk9_total || 0),
+        owendo_total: Number(item.owendo_total || 0),
+        espace_conseil_total: Number(item.espace_conseil_total || 0),
+        vie_total: Number(item.vie_total || 0),
+        vie_actifs: Number(item.vie_actifs || 0),
+        vie_resilies: Number(item.vie_resilies || 0),
+        iard_total: Number(item.iard_total || 0),
+        iard_actifs: Number(item.iard_actifs || 0),
+        iard_resilies: Number(item.iard_resilies || 0),
+        production_total: Number(item.production_total || 0),
+        production_actifs: Number(item.production_actifs || 0),
+        production_resilies: Number(item.production_resilies || 0)
+      }));
     
-    setAgentStats(formattedStats);
-    logger.info('useInventory', 'Fetch agent stats success', { 
-      count: formattedStats.length,
-      totalEntriesAcrossAgents: formattedStats.reduce((sum, stat) => sum + stat.total, 0)
-    });
-  } catch (error) {
-    console.error('Error fetching agent stats:', error);
-    logger.error('useInventory', 'Fetch agent stats failed', { error: String(error) });
-    toast({
-      title: 'Erreur',
-      description: 'Impossible de charger les statistiques des agents.',
-      variant: 'destructive',
-    });
-  } finally {
-    setIsLoadingStats(false);
-  }
-}, [rpc]);
+      setAgentStats(formattedStats);
+      logger.info('useInventory', 'Fetch agent stats success', { 
+        count: formattedStats.length,
+        totalEntriesAcrossAgents: formattedStats.reduce((sum, stat) => sum + stat.total, 0)
+      });
+    } catch (error) {
+      console.error('Error fetching agent stats:', error);
+      logger.error('useInventory', 'Fetch agent stats failed', { error: String(error) });
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de charger les statistiques des agents.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingStats(false);
+    }
+  }, [rpc]);
 
-// Fonction pour récupérer les statistiques journalières des agents
-const fetchAgentDailyStats = React.useCallback(async (daysLimit: number = 30) => {
-  setIsLoadingDailyStats(true);
-  logger.info('useInventory', 'Fetching agent daily stats via RPC', { daysLimit });
-  try {
-    const { data, error } = await rpc<AgentDailyStatsRPCRow[]>('get_agent_daily_stats_by_societe_type', {
-      days_limit: daysLimit
-    });
+  // Fonction pour récupérer les statistiques journalières des agents
+  const fetchAgentDailyStats = React.useCallback(async (daysLimit: number = 30) => {
+    setIsLoadingDailyStats(true);
+    logger.info('useInventory', 'Fetching agent daily stats via RPC', { daysLimit });
+    try {
+      const { data, error } = await rpc<AgentDailyStatsRPCRow[]>('get_agent_daily_stats_by_societe_type', {
+        days_limit: daysLimit
+      });
 
-    if (error) throw error;
+      if (error) throw error;
 
-    const formattedStats: AgentDailyStats[] = (data || []).map((item: AgentDailyStatsRPCRow) => ({
-      date_jour: item.date_jour,
-      nom_agent_inventaire: item.nom_agent_inventaire,
-      total_jour: Number(item.total_jour),
-      total_jour_actifs: Number(item.total_jour_actifs || 0),
-      total_jour_resilies: Number(item.total_jour_resilies || 0),
-      okala_total_jour: Number(item.okala_total_jour || 0),
-      site_okala_total_jour: Number(item.site_okala_total_jour || 0),
-      nzeng_ayong_total_jour: Number(item.nzeng_ayong_total_jour || 0),
-      pk9_total_jour: Number(item.pk9_total_jour || 0),
-      owendo_total_jour: Number(item.owendo_total_jour || 0),
-      espace_conseil_total_jour: Number(item.espace_conseil_total_jour || 0),
-      vie_total_jour: Number(item.vie_total_jour || 0),
-      vie_actifs_jour: Number(item.vie_actifs_jour || 0),
-      vie_resilies_jour: Number(item.vie_resilies_jour || 0),
-      iard_total_jour: Number(item.iard_total_jour || 0),
-      iard_actifs_jour: Number(item.iard_actifs_jour || 0),
-      iard_resilies_jour: Number(item.iard_resilies_jour || 0),
-      production_total_jour: Number(item.production_total_jour || 0),
-      production_actifs_jour: Number(item.production_actifs_jour || 0),
-      production_resilies_jour: Number(item.production_resilies_jour || 0)
-    }));
+      const formattedStats: AgentDailyStats[] = (data || []).map((item: AgentDailyStatsRPCRow) => ({
+        date_jour: item.date_jour,
+        nom_agent_inventaire: item.nom_agent_inventaire,
+        total_jour: Number(item.total_jour),
+        total_jour_actifs: Number(item.total_jour_actifs || 0),
+        total_jour_resilies: Number(item.total_jour_resilies || 0),
+        okala_total_jour: Number(item.okala_total_jour || 0),
+        site_okala_total_jour: Number(item.site_okala_total_jour || 0),
+        nzeng_ayong_total_jour: Number(item.nzeng_ayong_total_jour || 0),
+        pk9_total_jour: Number(item.pk9_total_jour || 0),
+        owendo_total_jour: Number(item.owendo_total_jour || 0),
+        espace_conseil_total_jour: Number(item.espace_conseil_total_jour || 0),
+        vie_total_jour: Number(item.vie_total_jour || 0),
+        vie_actifs_jour: Number(item.vie_actifs_jour || 0),
+        vie_resilies_jour: Number(item.vie_resilies_jour || 0),
+        iard_total_jour: Number(item.iard_total_jour || 0),
+        iard_actifs_jour: Number(item.iard_actifs_jour || 0),
+        iard_resilies_jour: Number(item.iard_resilies_jour || 0),
+        production_total_jour: Number(item.production_total_jour || 0),
+        production_actifs_jour: Number(item.production_actifs_jour || 0),
+        production_resilies_jour: Number(item.production_resilies_jour || 0)
+      }));
     
-    setAgentDailyStats(formattedStats);
-    logger.info('useInventory', 'Fetch agent daily stats success', { 
-      count: formattedStats.length,
-      daysCount: [...new Set(formattedStats.map(item => item.date_jour))].length
-    });
-  } catch (error) {
-    console.error('Error fetching agent daily stats:', error);
-    logger.error('useInventory', 'Fetch agent daily stats failed', { error: String(error) });
-    toast({
-      title: 'Erreur',
-      description: 'Impossible de charger les statistiques journalières des agents.',
-      variant: 'destructive',
-    });
-  } finally {
-    setIsLoadingDailyStats(false);
-  }
-}, [rpc]);
+      setAgentDailyStats(formattedStats);
+      logger.info('useInventory', 'Fetch agent daily stats success', { 
+        count: formattedStats.length,
+        daysCount: [...new Set(formattedStats.map(item => item.date_jour))].length
+      });
+    } catch (error) {
+      console.error('Error fetching agent daily stats:', error);
+      logger.error('useInventory', 'Fetch agent daily stats failed', { error: String(error) });
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de charger les statistiques journalières des agents.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingDailyStats(false);
+    }
+  }, [rpc]);
 
-// Charger la liste des agents et leurs statistiques au montage du composant
+  // Hook pour récupérer les statistiques basées sur les filtres appliqués
+  const getFilteredStats = React.useCallback(async () => {
+    try {
+      logger.info('useInventory', 'Fetching filtered stats via RPC', { filters });
+      const { data, error } = await rpc<FilteredStatsRow>('get_filtered_stats', {
+        keyword: filters.keyword ? normalizeSearchTerm(filters.keyword) : null,
+        societe_concernee: filters.societe_concernee || null,
+        type_document: filters.type_document ? filters.type_document.trim() : null,
+        date_effet_from: filters.date_effet_from || null,
+        date_effet_to: filters.date_effet_to || null,
+        etat_contrat: filters.etat_contrat || null
+      });
+
+      if (error) throw error;
+
+      // Initialiser les valeurs par défaut
+      const stats = {
+        total: 0,
+        vie: 0,
+        iard: 0,
+        production: 0
+      };
+
+      // Si des données sont retournées, les utiliser
+      if (data) {
+        stats.total = Number(data.total) || 0;
+        stats.vie = Number(data.vie) || 0;
+        stats.iard = Number(data.iard) || 0;
+        stats.production = Number(data.production) || 0;
+      }
+
+      logger.info('useInventory', 'Fetch filtered stats success', stats);
+      return stats;
+    } catch (error) {
+      console.error('Error fetching filtered stats:', error);
+      logger.error('useInventory', 'Fetch filtered stats failed', { error: String(error) });
+      // Retourner des valeurs par défaut en cas d'erreur
+      return {
+        total: 0,
+        vie: 0,
+        iard: 0,
+        production: 0
+      };
+    }
+  }, [rpc, filters]);
+
+  // Charger la liste des agents et leurs statistiques au montage
   useEffect(() => {
     fetchAgents();
     fetchAgentStats();
@@ -731,7 +740,7 @@ const fetchAgentDailyStats = React.useCallback(async (daysLimit: number = 30) =>
     submissionSuccess,
     addEntry,
     deleteEntry,
-    refreshEntries: fetchEntries,
+    refreshEntries: fetchAllEntries,
     // Pagination/tri/filtres
     page,
     pageSize,
