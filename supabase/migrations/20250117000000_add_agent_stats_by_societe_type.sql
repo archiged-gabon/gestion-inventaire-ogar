@@ -68,6 +68,13 @@ RETURNS TABLE (
   total_jour BIGINT,
   total_jour_actifs BIGINT,
   total_jour_resilies BIGINT,
+  -- Statistiques par agence (journalières)
+  okala_total_jour BIGINT,
+  site_okala_total_jour BIGINT,
+  nzeng_ayong_total_jour BIGINT,
+  pk9_total_jour BIGINT,
+  owendo_total_jour BIGINT,
+  espace_conseil_total_jour BIGINT,
   vie_total_jour BIGINT,
   vie_actifs_jour BIGINT,
   vie_resilies_jour BIGINT,
@@ -90,6 +97,13 @@ BEGIN
     COUNT(*) as total_jour,
     COUNT(*) FILTER (WHERE i.etat_contrat = 'Actif') as total_jour_actifs,
     COUNT(*) FILTER (WHERE i.etat_contrat = 'Résilié') as total_jour_resilies,
+    -- Statistiques par agence journalières
+    COUNT(*) FILTER (WHERE COALESCE(a.code, i.agence) = 'Okala') as okala_total_jour,
+    COUNT(*) FILTER (WHERE COALESCE(a.code, i.agence) = 'Site Okala') as site_okala_total_jour,
+    COUNT(*) FILTER (WHERE COALESCE(a.code, i.agence) = 'Nzeng-Ayong') as nzeng_ayong_total_jour,
+    COUNT(*) FILTER (WHERE COALESCE(a.code, i.agence) = 'PK9') as pk9_total_jour,
+    COUNT(*) FILTER (WHERE COALESCE(a.code, i.agence) = 'Owendo') as owendo_total_jour,
+    COUNT(*) FILTER (WHERE COALESCE(a.code, i.agence) = 'Espace Conseil') as espace_conseil_total_jour,
     -- Statistiques Vie journalières
     COUNT(*) FILTER (WHERE i.societe_concernee = 'Vie') as vie_total_jour,
     COUNT(*) FILTER (WHERE i.societe_concernee = 'Vie' AND i.etat_contrat = 'Actif') as vie_actifs_jour,
@@ -104,6 +118,7 @@ BEGIN
     COUNT(*) FILTER (WHERE i.societe_concernee = 'Production' AND i.etat_contrat = 'Résilié') as production_resilies_jour
   FROM 
     inventory i
+    LEFT JOIN public.agences a ON a.id = i.agence_id
   WHERE 
     i.nom_agent_inventaire != '' 
     AND i.created_at >= CURRENT_DATE - days_limit

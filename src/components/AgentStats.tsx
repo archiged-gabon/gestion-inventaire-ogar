@@ -23,24 +23,45 @@ import { fr } from 'date-fns/locale';
 // Composant pour afficher la répartition par agence
 const AgenceBreakdown: React.FC<{
   okala_total: number;
+  site_okala_total: number;
   nzeng_ayong_total: number;
   pk9_total: number;
   owendo_total: number;
   espace_conseil_total: number;
 }> = ({ 
   okala_total, 
+  site_okala_total,
   nzeng_ayong_total, 
   pk9_total, 
   owendo_total, 
   espace_conseil_total 
 }) => {
+  const hasAny =
+    okala_total > 0 ||
+    site_okala_total > 0 ||
+    nzeng_ayong_total > 0 ||
+    pk9_total > 0 ||
+    owendo_total > 0 ||
+    espace_conseil_total > 0;
+
   return (
     <div className="space-y-1.5 text-xs">
+      {!hasAny && (
+        <div className="text-gray-500">0</div>
+      )}
       {/* Okala */}
       {okala_total > 0 && (
         <div className="flex items-center justify-between bg-blue-50 rounded px-2 py-1">
-          <span className="font-medium text-blue-900">Okala</span>
+          <span className="font-medium text-blue-900">Agence Okala</span>
           <span className="text-blue-800 font-semibold">{okala_total}</span>
+        </div>
+      )}
+
+      {/* Site Okala */}
+      {site_okala_total > 0 && (
+        <div className="flex items-center justify-between bg-sky-50 rounded px-2 py-1">
+          <span className="font-medium text-sky-900">Site Okala</span>
+          <span className="text-sky-800 font-semibold">{site_okala_total}</span>
         </div>
       )}
       
@@ -177,6 +198,13 @@ interface GroupedDailyStats {
     total_jour: number;
     total_jour_actifs: number;
     total_jour_resilies: number;
+    // Statistiques journalières par agence
+    okala_total_jour: number;
+    site_okala_total_jour: number;
+    nzeng_ayong_total_jour: number;
+    pk9_total_jour: number;
+    owendo_total_jour: number;
+    espace_conseil_total_jour: number;
     // Statistiques journalières par type de société
     vie_total_jour: number;
     vie_actifs_jour: number;
@@ -234,6 +262,7 @@ export const AgentStats: React.FC<AgentStatsProps> = ({
       total_actifs: number;
       total_resilies: number;
       okala_total: number;
+      site_okala_total: number;
       nzeng_ayong_total: number;
       pk9_total: number;
       owendo_total: number;
@@ -261,6 +290,7 @@ export const AgentStats: React.FC<AgentStatsProps> = ({
           total_actifs: 0,
           total_resilies: 0,
           okala_total: 0,
+          site_okala_total: 0,
           nzeng_ayong_total: 0,
           pk9_total: 0,
           owendo_total: 0,
@@ -282,6 +312,7 @@ export const AgentStats: React.FC<AgentStatsProps> = ({
       m.total_actifs += s.total_actifs;
       m.total_resilies += s.total_resilies;
       m.okala_total += s.okala_total;
+      m.site_okala_total += s.site_okala_total;
       m.nzeng_ayong_total += s.nzeng_ayong_total;
       m.pk9_total += s.pk9_total;
       m.owendo_total += s.owendo_total;
@@ -343,6 +374,12 @@ export const AgentStats: React.FC<AgentStatsProps> = ({
         total_jour: stat.total_jour,
         total_jour_actifs: stat.total_jour_actifs || 0,
         total_jour_resilies: stat.total_jour_resilies || 0,
+        okala_total_jour: stat.okala_total_jour || 0,
+        site_okala_total_jour: stat.site_okala_total_jour || 0,
+        nzeng_ayong_total_jour: stat.nzeng_ayong_total_jour || 0,
+        pk9_total_jour: stat.pk9_total_jour || 0,
+        owendo_total_jour: stat.owendo_total_jour || 0,
+        espace_conseil_total_jour: stat.espace_conseil_total_jour || 0,
         // Statistiques journalières par type de société
         vie_total_jour: stat.vie_total_jour || 0,
         vie_actifs_jour: stat.vie_actifs_jour || 0,
@@ -379,7 +416,7 @@ export const AgentStats: React.FC<AgentStatsProps> = ({
   }
 
   // Vérifier si les données sont disponibles en fonction de l'onglet actif
-  const hasGlobalStats = mergedFocusedStats.length > 0;
+  const hasGlobalStats = mergedStats.length > 0;
   const hasDailyStats = groupedDailyStats.length > 0;
   const hasNoData = (activeTab === "global" && !hasGlobalStats) || (activeTab === "daily" && !hasDailyStats);
 
@@ -441,7 +478,7 @@ export const AgentStats: React.FC<AgentStatsProps> = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {mergedFocusedStats.map((stat) => (
+                {mergedStats.map((stat) => (
                   <TableRow key={stat.nom_agent_inventaire} className="border-gray-100 hover:bg-blue-50/50 transition-colors duration-150">
                     <TableCell className="font-apple-text font-medium text-gray-900">
                       {stat.nom_agent_inventaire}
@@ -465,6 +502,7 @@ export const AgentStats: React.FC<AgentStatsProps> = ({
                     <TableCell className="font-apple-text text-gray-700 text-center">
                       <AgenceBreakdown
                         okala_total={stat.okala_total}
+                        site_okala_total={stat.site_okala_total}
                         nzeng_ayong_total={stat.nzeng_ayong_total}
                         pk9_total={stat.pk9_total}
                         owendo_total={stat.owendo_total}
@@ -548,6 +586,7 @@ export const AgentStats: React.FC<AgentStatsProps> = ({
                                   {agent.total_jour_resilies}
                                 </span>
                               </TableCell>
+                              
                               <TableCell className="font-apple-text text-gray-700 text-center">
                                 <SocieteTypeBreakdown
                                   vie_total={agent.vie_total_jour}

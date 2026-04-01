@@ -44,13 +44,48 @@ export const ExportDropdownMenu: React.FC<ExportDropdownMenuProps> = ({
     if (loadingAgences) return;
     setLoadingAgences(true);
     try {
+      // Résoudre les IDs d'agence en base (mode mixte: texte + agence_id)
+      const agenceIds = new Map<string, string>();
+      try {
+        const client = supabase as unknown as {
+          from: (table: string) => {
+            select: (columns: string) => {
+              eq: (column: string, value: string) => {
+                maybeSingle: () => Promise<{ data: { id?: string } | null; error: unknown }>
+              }
+            }
+          }
+        };
+
+        const idResults = await Promise.all(
+          AGENCES.map(async (a) => {
+            const { data } = await client
+              .from('agences')
+              .select('id')
+              .eq('code', a.value)
+              .maybeSingle();
+            return { code: a.value, id: data?.id ?? null };
+          })
+        );
+
+        idResults.forEach((r) => {
+          if (r.id) agenceIds.set(r.code, r.id);
+        });
+      } catch {
+        // Si la table agences n'existe pas / pas accessible, on reste sur le filtre texte
+      }
+
       const results = await Promise.all(
         AGENCES.map(async (a) => {
-          const { count, error } = await supabase
+          const id = agenceIds.get(a.value);
+          let query = supabase
             .from('inventory')
             .select('*', { count: 'exact', head: true })
             .eq('societe_concernee', societeConcernee)
-            .eq('agence', a.value);
+            // Mode mixte: agence texte ou agence_id
+            .or(id ? `agence.eq.${a.value},agence_id.eq.${id}` : `agence.eq.${a.value}`);
+
+          const { count, error } = await query;
           if (error) return null;
           if ((count || 0) > 0) return a;
           return null;

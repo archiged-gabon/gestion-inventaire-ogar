@@ -8,6 +8,7 @@ import { logger } from '@/lib/logger';
 // Liste des agences disponibles
 export const AGENCES = [
   { value: 'Okala', label: 'Agence Okala' },
+  { value: 'Site Okala', label: 'Site Okala' },
   { value: 'Nzeng-Ayong', label: 'Agence Nzeng-Ayong' },
   { value: 'PK9', label: 'Agence PK9' },
   { value: 'Espace Conseil', label: 'Espace Conseil' },

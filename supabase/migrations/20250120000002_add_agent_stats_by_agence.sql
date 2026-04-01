@@ -11,6 +11,7 @@ RETURNS TABLE (
   total_resilies BIGINT,
   -- Statistiques par agence
   okala_total BIGINT,
+  site_okala_total BIGINT,
   nzeng_ayong_total BIGINT,
   pk9_total BIGINT,
   owendo_total BIGINT,
@@ -39,11 +40,12 @@ BEGIN
     COUNT(*) FILTER (WHERE i.etat_contrat = 'Actif') as total_actifs,
     COUNT(*) FILTER (WHERE i.etat_contrat = 'Résilié') as total_resilies,
     -- Statistiques par agence
-    COUNT(*) FILTER (WHERE i.agence = 'Okala') as okala_total,
-    COUNT(*) FILTER (WHERE i.agence = 'Nzeng-Ayong') as nzeng_ayong_total,
-    COUNT(*) FILTER (WHERE i.agence = 'PK9') as pk9_total,
-    COUNT(*) FILTER (WHERE i.agence = 'Owendo') as owendo_total,
-    COUNT(*) FILTER (WHERE i.agence = 'Espace Conseil') as espace_conseil_total,
+    COUNT(*) FILTER (WHERE COALESCE(a.code, i.agence) = 'Okala') as okala_total,
+    COUNT(*) FILTER (WHERE COALESCE(a.code, i.agence) = 'Site Okala') as site_okala_total,
+    COUNT(*) FILTER (WHERE COALESCE(a.code, i.agence) = 'Nzeng-Ayong') as nzeng_ayong_total,
+    COUNT(*) FILTER (WHERE COALESCE(a.code, i.agence) = 'PK9') as pk9_total,
+    COUNT(*) FILTER (WHERE COALESCE(a.code, i.agence) = 'Owendo') as owendo_total,
+    COUNT(*) FILTER (WHERE COALESCE(a.code, i.agence) = 'Espace Conseil') as espace_conseil_total,
     -- Statistiques par type de société
     COUNT(*) FILTER (WHERE i.societe_concernee = 'Vie') as vie_total,
     COUNT(*) FILTER (WHERE i.societe_concernee = 'Vie' AND i.etat_contrat = 'Actif') as vie_actifs,
@@ -56,6 +58,7 @@ BEGIN
     COUNT(*) FILTER (WHERE i.societe_concernee = 'Production' AND i.etat_contrat = 'Résilié') as production_resilies
   FROM 
     inventory i
+    LEFT JOIN public.agences a ON a.id = i.agence_id
   WHERE 
     i.nom_agent_inventaire != ''
   GROUP BY 

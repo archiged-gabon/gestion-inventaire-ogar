@@ -22,6 +22,35 @@ export const exportToExcel = async (
   // Si aucune entrée n'est fournie et qu'une société est spécifiée, chercher les données filtrées
   let dataToExport = entries;
 
+  const resolveAgenceId = async (code: string): Promise<string | null> => {
+    try {
+      const client = supabase as unknown as {
+        from: (table: string) => {
+          select: (columns: string) => {
+            eq: (column: string, value: string) => {
+              maybeSingle: () => Promise<{ data: { id?: string } | null; error: unknown }>
+            }
+          }
+        }
+      };
+
+      const { data, error } = await client
+        .from('agences')
+        .select('id')
+        .eq('code', code)
+        .maybeSingle();
+
+      if (error) {
+        logger.warn('excelExport', 'Resolve agence_id failed', { error: String(error), agence: code });
+      }
+
+      return data?.id ?? null;
+    } catch (e) {
+      logger.warn('excelExport', 'Resolve agence_id threw', { error: String(e), agence: code });
+      return null;
+    }
+  };
+
   if (!entries && (societeConcernee || etatContrat || agence)) {
     logger.info('excelExport', 'Fetching filtered data', { societeConcernee, etatContrat, agence });
     
@@ -41,7 +70,8 @@ export const exportToExcel = async (
 
       while (hasMoreData) {
         // Construire la requête avec pagination
-        let query = supabase
+        // Cast "any" pour permettre de filtrer aussi sur agence_id même si les types générés Supabase ne sont pas encore à jour
+        let query = (supabase as unknown as any)
           .from('inventory')
           .select('*')
           .order('no', { ascending: true });
@@ -58,7 +88,12 @@ export const exportToExcel = async (
 
         // Appliquer le filtre par agence si fourni
         if (agence) {
-          query = query.eq('agence', agence);
+          const agenceId = await resolveAgenceId(agence);
+          if (agenceId) {
+            query = query.or(`agence.eq.${agence},agence_id.eq.${agenceId}`);
+          } else {
+            query = query.eq('agence', agence);
+          }
         }
 
         // Appliquer la pagination
@@ -138,6 +173,7 @@ export const exportToExcel = async (
     'Société concernée (Vie/Non Vie)': entry.societe_concernee,
     'TYPE DOCUMENT': entry.type_document,
     'ÉTAT CONTRAT': entry.etat_contrat || 'n/o', // Afficher n/o pour les anciennes entrées sans état
+    'AGENCE': (entry as any).agence || 'n/o',
     'AGENT INVENTAIRE': entry.nom_agent_inventaire,
     'CRÉÉ LE': entry.created_at
   }));
@@ -157,6 +193,7 @@ export const exportToExcel = async (
     { wch: 25 }, // Société concernée
     { wch: 20 }, // TYPE DOCUMENT
     { wch: 12 }, // ÉTAT CONTRAT
+    { wch: 16 }, // AGENCE
     { wch: 20 }, // AGENT INVENTAIRE
     { wch: 20 }, // CRÉÉ LE
   ];

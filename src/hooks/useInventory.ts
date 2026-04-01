@@ -35,6 +35,7 @@ export type AgentStats = {
   total_resilies: number;
   // Statistiques par agence
   okala_total: number;
+  site_okala_total: number;
   nzeng_ayong_total: number;
   pk9_total: number;
   owendo_total: number;
@@ -58,6 +59,13 @@ export type AgentDailyStats = {
   total_jour: number;
   total_jour_actifs: number;
   total_jour_resilies: number;
+  // Statistiques journalières par agence
+  okala_total_jour: number;
+  site_okala_total_jour: number;
+  nzeng_ayong_total_jour: number;
+  pk9_total_jour: number;
+  owendo_total_jour: number;
+  espace_conseil_total_jour: number;
   // Statistiques journalières par type de société
   vie_total_jour: number;
   vie_actifs_jour: number;
@@ -121,6 +129,30 @@ export const useInventory = () => {
     return client.from('agents');
   };
 
+  const resolveAgenceId = async (code: string): Promise<string | null> => {
+    const client = supabase as unknown as {
+      from: (table: string) => {
+        select: (columns: string) => {
+          eq: (column: string, value: string) => {
+            maybeSingle: () => Promise<{ data: { id?: string } | null; error: unknown }>
+          }
+        }
+      }
+    };
+
+    const { data, error } = await client
+      .from('agences')
+      .select('id')
+      .eq('code', code)
+      .maybeSingle();
+
+    if (error) {
+      logger.warn('useInventory', 'Resolve agence_id failed', { error: String(error), agence: code });
+    }
+
+    return data?.id ?? null;
+  };
+
   type FilteredStatsRow = {
     societe_type: string;
     total: number;
@@ -134,6 +166,7 @@ export const useInventory = () => {
     total_actifs?: number | null;
     total_resilies?: number | null;
     okala_total?: number | null;
+    site_okala_total?: number | null;
     nzeng_ayong_total?: number | null;
     pk9_total?: number | null;
     owendo_total?: number | null;
@@ -154,6 +187,12 @@ export const useInventory = () => {
     total_jour: number;
     total_jour_actifs?: number | null;
     total_jour_resilies?: number | null;
+    okala_total_jour?: number | null;
+    site_okala_total_jour?: number | null;
+    nzeng_ayong_total_jour?: number | null;
+    pk9_total_jour?: number | null;
+    owendo_total_jour?: number | null;
+    espace_conseil_total_jour?: number | null;
     vie_total_jour?: number | null;
     vie_actifs_jour?: number | null;
     vie_resilies_jour?: number | null;
@@ -291,6 +330,12 @@ export const useInventory = () => {
       const normalizedAgent = normalizeSearchTerm(agentName);
       let agentId: string | null = null;
 
+      // Résoudre agence_id à partir du code agence sélectionné (mode mixte: texte + id)
+      let agenceId: string | null = null;
+      if (agence) {
+        agenceId = await resolveAgenceId(agence);
+      }
+
       // Tenter de trouver l'agent par normalized_name
       const { data: existingAgent, error: findAgentError } = await fromAgents()
         .select('id, normalized_name')
@@ -338,6 +383,7 @@ export const useInventory = () => {
         nom_agent_inventaire: agentName,
         etat_contrat: data.etat_contrat,
         agence: agence,
+        agence_id: agenceId,
         agent_id: agentId,
       } as unknown as TablesInsert<'inventory'>;
 
@@ -558,6 +604,7 @@ const fetchAgentStats = React.useCallback(async () => {
       total_actifs: Number(item.total_actifs || 0),
       total_resilies: Number(item.total_resilies || 0),
       okala_total: Number(item.okala_total || 0),
+      site_okala_total: Number(item.site_okala_total || 0),
       nzeng_ayong_total: Number(item.nzeng_ayong_total || 0),
       pk9_total: Number(item.pk9_total || 0),
       owendo_total: Number(item.owendo_total || 0),
@@ -608,6 +655,12 @@ const fetchAgentDailyStats = React.useCallback(async (daysLimit: number = 30) =>
       total_jour: Number(item.total_jour),
       total_jour_actifs: Number(item.total_jour_actifs || 0),
       total_jour_resilies: Number(item.total_jour_resilies || 0),
+      okala_total_jour: Number(item.okala_total_jour || 0),
+      site_okala_total_jour: Number(item.site_okala_total_jour || 0),
+      nzeng_ayong_total_jour: Number(item.nzeng_ayong_total_jour || 0),
+      pk9_total_jour: Number(item.pk9_total_jour || 0),
+      owendo_total_jour: Number(item.owendo_total_jour || 0),
+      espace_conseil_total_jour: Number(item.espace_conseil_total_jour || 0),
       vie_total_jour: Number(item.vie_total_jour || 0),
       vie_actifs_jour: Number(item.vie_actifs_jour || 0),
       vie_resilies_jour: Number(item.vie_resilies_jour || 0),
