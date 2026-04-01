@@ -521,6 +521,30 @@ export const useInventory = () => {
     fetchAllEntries();
   };
 
+  const normalizeAgentNameForCompare = (str: string) => {
+    return (str || '')
+      .trim()
+      .replace(/[’`´]/g, "'")
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ');
+  };
+
+  const canonicalizeAgentName = (name: string) => {
+    const n = (name || '').trim().replace(/\s+/g, ' ');
+    const key = normalizeAgentNameForCompare(n);
+
+    if (
+      key === normalizeAgentNameForCompare("MA-N’FOURRE MOUSSAVOU Frédérique janel") ||
+      key === normalizeAgentNameForCompare("MA-N'FOURRE MOUSSAVOU Frédérique janel")
+    ) {
+      return "MA-N’FOURRE MOUSSAVOU Frédérique";
+    }
+
+    return n;
+  };
+
   // Fonction pour récupérer la liste des agents distincts
   const fetchAgents = async () => {
     setIsLoadingAgents(true);
@@ -534,8 +558,16 @@ export const useInventory = () => {
 
       if (error) throw error;
       
-      // Extraire les noms d'agents uniques
-      const uniqueAgents = [...new Set(data?.map(item => item.nom_agent_inventaire) || [])];
+      const rawAgents = data?.map((item) => item.nom_agent_inventaire).filter(Boolean) || [];
+      const map = new Map<string, string>();
+      for (const a of rawAgents) {
+        const canonical = canonicalizeAgentName(a);
+        const k = normalizeAgentNameForCompare(canonical);
+        if (!map.has(k)) {
+          map.set(k, canonical);
+        }
+      }
+      const uniqueAgents = [...map.values()].sort((a, b) => a.localeCompare(b));
       setAgents(uniqueAgents);
       logger.info('useInventory', 'Fetch agents success', { count: uniqueAgents.length });
     } catch (error) {

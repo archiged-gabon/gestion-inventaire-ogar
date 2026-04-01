@@ -249,6 +249,8 @@ export const AgentStats: React.FC<AgentStatsProps> = ({
     const map = new Map<string, string>();
     map.set(tokenKey('BIBANG Warren'), tokenKey('BIBANG ANGOMO Serge Warhen'));
     map.set(tokenKey('Joël Jésimièl OLOLO'), tokenKey('OLOLO Joel Jesimiel'));
+    map.set(tokenKey("MA-N’FOURRE MOUSSAVOU Frédérique janel"), tokenKey("MA-N’FOURRE MOUSSAVOU Frédérique"));
+    map.set(tokenKey("MA-N'FOURRE MOUSSAVOU Frédérique janel"), tokenKey("MA-N'FOURRE MOUSSAVOU Frédérique"));
     return map;
   }, [tokenKey]);
 
