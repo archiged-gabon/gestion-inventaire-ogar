@@ -47,7 +47,9 @@ export const generateDuplicateKey = (entry: InventoryEntry | InventoryFormData):
   const nom_assure = normalizeString(entry.nom_assure);
   
   // Pour les dates, on utilise le format ISO pour la comparaison
-  const date_effet = entry.date_effet instanceof Date 
+  const date_effet = !entry.date_effet
+    ? ''
+    : entry.date_effet instanceof Date 
     ? entry.date_effet.toISOString().split('T')[0]
     : entry.date_effet.split('T')[0];
   

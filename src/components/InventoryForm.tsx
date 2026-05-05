@@ -25,18 +25,16 @@ const inventorySchema = z.object({
   intermediaire_orass: z.string().trim().min(1, { message: "INTERMEDIAIRE ORASS est obligatoire" }),
   police_orass: z.string().trim().min(1, { message: "POLICE ORASS est obligatoire" }),
   ancien_numero: z.string().optional(),
-  date_effet: z.date({
-    required_error: "DATE EFFET est obligatoire",
-    invalid_type_error: "DATE EFFET doit être une date valide"
-  }).refine((date) => date instanceof Date && !isNaN(date.getTime()), {
-    message: "DATE EFFET doit être une date valide"
-  }),
-  date_echeance: z.date({
-    required_error: "DATE ECHEANCE est obligatoire",
-    invalid_type_error: "DATE ECHEANCE doit être une date valide"
-  }).refine((date) => date instanceof Date && !isNaN(date.getTime()), {
-    message: "DATE ECHEANCE doit être une date valide"
-  }),
+  date_effet: z
+    .date({
+      invalid_type_error: "DATE EFFET doit être une date valide"
+    })
+    .optional(),
+  date_echeance: z
+    .date({
+      invalid_type_error: "DATE ECHEANCE doit être une date valide"
+    })
+    .optional(),
   nom_assure: z.string().trim().min(1, { message: "NOM ASSURE est obligatoire" }),
   societe_concernee: z.enum(["Vie", "IARD (Sinistre)", "Production"], { required_error: "Société concernée est obligatoire" }),
   type_document: z.string().trim().min(1, { message: "TYPE DOCUMENT est obligatoire" }),
@@ -303,7 +301,7 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ onSubmit, isSubmit
                   <FormItem className="space-y-3">
                     <FormLabel className="text-sm font-apple-text font-semibold text-gray-800 tracking-wide">
                       Date d'effet
-                      <span className="text-red-500 ml-1">*</span>
+                      <span className="text-red-500 ml-1">(optionnel)</span>
                     </FormLabel>
                     <FormControl>
                       <DateInput
@@ -326,7 +324,7 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ onSubmit, isSubmit
                   <FormItem className="space-y-3">
                     <FormLabel className="text-sm font-apple-text font-semibold text-gray-800 tracking-wide">
                       Date d'échéance
-                      <span className="text-red-500 ml-1">*</span>
+                      <span className="text-red-500 ml-1">(optionnel)</span>
                     </FormLabel>
                     <FormControl>
                       <DateInput
