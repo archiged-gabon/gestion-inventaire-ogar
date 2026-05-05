@@ -301,7 +301,7 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ onSubmit, isSubmit
                   <FormItem className="space-y-3">
                     <FormLabel className="text-sm font-apple-text font-semibold text-gray-800 tracking-wide">
                       Date d'effet
-                      <span className="ml-1">(optionnel)</span>
+                      <span className="text-gray-400 ml-1 font-normal">(optionnel)</span>
                     </FormLabel>
                     <FormControl>
                       <DateInput
@@ -324,7 +324,7 @@ export const InventoryForm: React.FC<InventoryFormProps> = ({ onSubmit, isSubmit
                   <FormItem className="space-y-3">
                     <FormLabel className="text-sm font-apple-text font-semibold text-gray-800 tracking-wide">
                       Date d'échéance
-                      <span className="ml-1">(optionnel)</span>
+                      <span className="text-gray-400 ml-1 font-normal">(optionnel)</span>
                     </FormLabel>
                     <FormControl>
                       <DateInput
