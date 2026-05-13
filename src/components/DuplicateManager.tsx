@@ -19,6 +19,11 @@ import { toast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { format } from 'date-fns';
 
+const displayDbDate = (value: string | null | undefined) => {
+  if (!value) return '-';
+  return value.split('T')[0];
+};
+
 interface DuplicateManagerProps {
   entries: InventoryEntry[];
   onEntriesChange: () => void;
@@ -156,7 +161,7 @@ export const DuplicateManager: React.FC<DuplicateManagerProps> = ({
         group.fields.police_orass,
         group.fields.intermediaire_orass,
         group.fields.nom_assure,
-        group.fields.date_effet,
+        displayDbDate(group.fields.date_effet),
         entry.no,
         entry.nom_agent_inventaire,
         entry.type_document,
@@ -253,7 +258,7 @@ export const DuplicateManager: React.FC<DuplicateManagerProps> = ({
                     <div><strong>Police ORASS:</strong> {group.fields.police_orass}</div>
                     <div><strong>Intermédiaire:</strong> {group.fields.intermediaire_orass}</div>
                     <div><strong>Assuré:</strong> {group.fields.nom_assure}</div>
-                    <div><strong>Date effet:</strong> {format(new Date(group.fields.date_effet), 'dd/MM/yyyy')}</div>
+                    <div><strong>Date effet:</strong> {displayDbDate(group.fields.date_effet)}</div>
                   </div>
                 </CardDescription>
               </CardHeader>

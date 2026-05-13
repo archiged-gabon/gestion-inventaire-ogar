@@ -5,14 +5,19 @@ import { logger } from '@/lib/logger';
 import { SimpleDuplicateIndicator } from './DuplicateIndicator';
 import { detectDuplicates } from '@/utils/duplicateDetection';
 
+const displayDbDate = (value: string | null | undefined) => {
+  if (!value) return '-';
+  return value.split('T')[0];
+};
+
 export interface InventoryEntry {
   id: string;
   no: number;
   intermediaire_orass: string;
   police_orass: string;
   ancien_numero: string | null;
-  date_effet: string;
-  date_echeance: string;
+  date_effet: string | null;
+  date_echeance: string | null;
   nom_assure: string;
   societe_concernee: string;
   type_document: string;
@@ -82,8 +87,8 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({ entries }) => {
               <TableCell className="font-apple-text text-foreground/80">{entry.intermediaire_orass}</TableCell>
               <TableCell className="font-apple-text text-foreground/80">{entry.police_orass}</TableCell>
               <TableCell className="font-apple-text text-muted-foreground">{entry.ancien_numero || '-'}</TableCell>
-              <TableCell className="font-apple-text text-foreground/80">{format(new Date(entry.date_effet), 'dd/MM/yyyy')}</TableCell>
-              <TableCell className="font-apple-text text-foreground/80">{format(new Date(entry.date_echeance), 'dd/MM/yyyy')}</TableCell>
+              <TableCell className="font-apple-text text-foreground/80">{displayDbDate(entry.date_effet)}</TableCell>
+              <TableCell className="font-apple-text text-foreground/80">{displayDbDate(entry.date_echeance)}</TableCell>
               <TableCell className="font-apple-text text-foreground/80">{entry.nom_assure}</TableCell>
               <TableCell className="font-apple-text">
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
